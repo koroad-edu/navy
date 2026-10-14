@@ -1077,7 +1077,21 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     }
   };
 
+  // 이동하는 화면 외의 유튜브/영상 재생 중지(겹침 방지)
+  function stopMediaExcept(targetId){
+    var target=$("s-"+targetId);
+    document.querySelectorAll("iframe").forEach(function(f){
+      if(target && target.contains(f)) return;      // 목적지 화면 영상은 그대로
+      var s=f.getAttribute("src"); if(s){ f.src=s; } // src 리셋 → 재생 중지
+    });
+    document.querySelectorAll("video").forEach(function(v){
+      if(target && target.contains(v)) return;
+      try{ v.pause(); }catch(e){}
+    });
+  }
+
   function go(name){
+    stopMediaExcept(name);
     SCREENS.forEach(function(s){
       var el=$("s-"+s); if(el) el.classList.toggle("active", s===name);
     });
