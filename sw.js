@@ -1,7 +1,7 @@
 /* 해군 장병 교통안전 교육 — Service Worker
    ※ 콘텐츠(문항·영상 목록 등)를 수정한 뒤에는 아래 CACHE 버전을 올리세요(예: v1 → v2).
      그래야 사용자 기기에서 새 버전으로 갱신됩니다. */
-const CACHE = "navy-safety-v4";
+const CACHE = "navy-safety-v5";
 const SHELL = [
   "./",
   "./index.html",

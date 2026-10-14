@@ -169,6 +169,7 @@
   .qexp.show{display:block;}
   .qexp b{color:var(--cyan);}
   .qexp.x b{color:var(--coral);}
+  .qexp .ans{color:#2DD4BF !important; font-weight:800;}
 
   /* result */
   .scoreboard{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:18px 0;}
@@ -511,11 +512,11 @@
     <div class="card">
       <div class="kicker">STEP 6 · 사후 성취도 평가</div>
       <h1 class="disp" style="font-size:26px; margin:6px 0 4px;">이제, 확인해 볼까요?</h1>
-      <div class="lead">학습 내용을 바탕으로 풀어 주세요. 교육 전과 비교해 이해도 변화를 확인합니다.</div>
+      <div class="lead" id="postLead">학습 내용을 바탕으로 풀어 주세요. 교육 전과 비교해 이해도 변화를 확인합니다.</div>
       <div class="qwrap" id="postQuiz"></div>
       <div class="err" id="postErr">모든 문항에 답해 주세요.</div>
       <div class="btnrow">
-        <button class="btn coral wide" onclick="submitPost()">채점하기 →</button>
+        <button class="btn coral wide" id="postSubmitBtn" onclick="submitPost()">채점하기 →</button>
       </div>
     </div>
   </section>
@@ -1154,7 +1155,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     if(countAnswered(state.post)<TOTAL){ $("postErr").style.display="block"; return; }
     $("postErr").style.display="none";
     state.postScore=scoreOf(state.post);
-    // reveal feedback
+    // 채점 결과 표시: 정답/오답 + (오답이면) 정답 보기 + 해설
     QUESTIONS.forEach(function(item, qi){
       var exp=$("post_exp"+qi);
       var picked=state.post[qi];
@@ -1166,13 +1167,24 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
         l.classList.remove("sel");
         if(o===correct) l.classList.add("correct");
         if(o===picked && picked!==correct) l.classList.add("wrong");
+        var inp=l.querySelector("input"); if(inp) inp.disabled=true; // 채점 후 변경 방지
       });
       var ok=(picked===correct);
       exp.className="qexp show"+(ok?"":" x");
-      exp.innerHTML=(ok?"<b>정답!</b> ":"<b>오답</b> — ")+escapeHtml(item.exp);
+      if(ok){
+        exp.innerHTML="<b>정답입니다.</b> "+escapeHtml(item.exp);
+      } else {
+        exp.innerHTML="<b>오답입니다.</b> 정답: <b class=\"ans\">"+escapeHtml(item.opts[correct])+"</b><br>"+escapeHtml(item.exp);
+      }
     });
-    buildResult();
-    go("result");
+    buildResult(); // 결과값 미리 준비
+    // 먼저 정답·해설을 확인(재학습)한 뒤 결과로 이동
+    var lead=$("postLead");
+    if(lead) lead.innerHTML="<b>채점 완료</b> — 사후 "+state.postScore+" / "+TOTAL+"점. 아래에서 <b style='color:#FF5A5F'>틀린 문항의 정답과 해설</b>을 확인한 뒤, 맨 아래 버튼을 눌러 주세요.";
+    var btn=$("postSubmitBtn");
+    if(btn){ btn.textContent="결과·수료증 확인 →"; btn.className="btn primary wide";
+      btn.onclick=function(){ go("result"); }; }
+    window.scrollTo({top:0,behavior:"smooth"});
   };
 
   function buildResult(){
@@ -1297,8 +1309,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 
       // title
       ctx.fillStyle="#EAF1FB";
-      ctx.font="900 92px 'Black Han Sans','Noto Sans KR','Malgun Gothic',sans-serif";
-      ctx.fillText("수 료 증", cx, 250);
+      ctx.font="800 86px 'Noto Sans KR','Malgun Gothic',sans-serif";
+      ctx.fillText("수 료 증", cx, 252);
       ctx.fillStyle="#2DD4BF";
       ctx.font="500 24px 'Noto Sans KR',sans-serif";
       ctx.fillText("CERTIFICATE OF COMPLETION", cx, 292);
@@ -1309,8 +1321,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       ctx.font="500 30px 'Noto Sans KR','Malgun Gothic',sans-serif";
       ctx.fillText("성    명", cx, 380);
       ctx.fillStyle="#FFB020";
-      ctx.font="900 76px 'Black Han Sans','Noto Sans KR','Malgun Gothic',sans-serif";
-      ctx.fillText(i.name, cx, 455);
+      ctx.font="800 70px 'Noto Sans KR','Malgun Gothic',sans-serif";
+      ctx.fillText(i.name, cx, 452);
 
       // affiliation
       ctx.fillStyle="#9DB0CC";
