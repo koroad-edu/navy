@@ -174,6 +174,15 @@
   /* result */
   .scoreboard{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; margin:18px 0;}
   .scoreboard.two{grid-template-columns:1fr 1fr;}
+  /* 수료증 오버레이(모바일) */
+  .cert-ov{position:fixed; inset:0; z-index:9999; background:rgba(4,12,26,.93); display:flex; align-items:center; justify-content:center; padding:16px; padding-top:calc(16px + env(safe-area-inset-top,0px)); overflow:auto;}
+  .cert-box{background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; width:100%; max-width:560px; max-height:92vh; overflow:auto; text-align:center; box-shadow:0 20px 50px rgba(0,0,0,.5);}
+  .cert-title{font-weight:800; font-size:17px; color:var(--text); margin-bottom:12px;}
+  .cert-img{width:100%; border-radius:10px; border:1px solid var(--line); display:block; margin-bottom:12px;}
+  .cert-hint{font-size:13px; color:var(--muted); line-height:1.55; margin-bottom:14px;}
+  .cert-hint b{color:var(--amber);}
+  .cert-btns{display:flex; flex-direction:column; gap:10px;}
+  .cert-btns .btn{width:100%;}
   .sc{background:#0b1d38; border:1px solid var(--line); border-radius:16px; padding:18px; text-align:center;}
   .sc .n{font-family:var(--disp); font-size:40px; line-height:1;}
   .sc .n.cyan{color:var(--cyan);} .sc .n.coral{color:var(--coral);} .sc .n.amber{color:var(--amber);}
@@ -981,7 +990,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
      - 비워두면 전송하지 않고 이 기기(localStorage)에만 기록됩니다.
        (설정 방법과 붙여넣을 Apps Script 코드는 별도 안내 참고)
      ============================================================ */
-  var SHEET_ENDPOINT = "";
+  var SHEET_ENDPOINT = "https://script.google.com/macros/s/AKfycbxmo-K-0JuODXZv31KbJ3nE0bMX_7rHU3Y6zq63nt9p3RhgAcEENnnHJXaOssdzhmdy/exec";
 
   // ---------- Quiz bank ----------
   var QUESTIONS = [
@@ -1359,17 +1368,49 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
       ctx.font="700 20px 'Noto Sans KR',sans-serif";
       ctx.fillText("교육본부", W-230, H-168);
 
-      var img=cvs.toDataURL("image/jpeg",0.94);
+      var img=cvs.toDataURL("image/jpeg",0.95);
+      var fname="수료증_해군_"+i.name;
       var jsPDFctor=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:(window.jsPDF||null);
-      if(!jsPDFctor){ alert("PDF 생성 모듈을 불러오지 못했습니다. 화면을 캡처해 사용해 주세요."); return; }
-      var pdf=new jsPDFctor({orientation:"landscape",unit:"mm",format:"a4"});
-      pdf.addImage(img,"JPEG",0,0,Wmm,Hmm);
-      var fname="수료증_해군_"+i.name+".pdf";
-      pdf.save(fname);
+      var makePdf=jsPDFctor?function(){ var pdf=new jsPDFctor({orientation:"landscape",unit:"mm",format:"a4"}); pdf.addImage(img,"JPEG",0,0,Wmm,Hmm); return pdf; }:null;
+      var ua=navigator.userAgent||"";
+      var isMobile=/Android|iPhone|iPad|iPod|Mobile|Silk|KAKAOTALK|NAVER|Line|Instagram|FBAN|FBAV/i.test(ua);
+      if(makePdf && !isMobile){
+        makePdf().save(fname+".pdf");   // 데스크톱: 기존처럼 바로 PDF 저장
+        return;
+      }
+      // 모바일/인앱 브라우저: 이미지로 띄워 길게 눌러 저장 + 저장 버튼 제공
+      showCertOverlay(img, cvs, makePdf, fname);
     }catch(e){
       alert("수료증 생성 중 오류가 발생했습니다: "+e.message);
     }
   };
+
+  // 모바일용 수료증 표시/저장 오버레이
+  function showCertOverlay(imgURL, cvs, makePdf, fname){
+    var ov=document.createElement("div"); ov.className="cert-ov";
+    var box=document.createElement("div"); box.className="cert-box";
+    var t=document.createElement("div"); t.className="cert-title"; t.textContent="수료증이 준비되었습니다";
+    var im=document.createElement("img"); im.className="cert-img"; im.src=imgURL; im.alt="수료증";
+    var hint=document.createElement("div"); hint.className="cert-hint";
+    hint.innerHTML="저장이 안 되면 위 수료증을 <b>길게 눌러</b> ‘이미지 저장’을 선택하세요.<br>카카오톡·네이버 등에서 열었다면 <b>우측 상단 메뉴 → 다른 브라우저로 열기</b>를 권장합니다.";
+    var bts=document.createElement("div"); bts.className="cert-btns";
+    box.appendChild(t); box.appendChild(im); box.appendChild(hint); box.appendChild(bts);
+    ov.appendChild(box); document.body.appendChild(ov);
+    bts.appendChild(mkBtn("🖼 이미지로 저장","btn primary", function(){
+      try{
+        var a=document.createElement("a"); a.href=cvs.toDataURL("image/png"); a.download=fname+".png";
+        document.body.appendChild(a); a.click(); setTimeout(function(){ if(a.parentNode) a.parentNode.removeChild(a); },400);
+      }catch(e){ alert("이 브라우저에서는 자동 저장이 막혀 있습니다. 위 수료증을 길게 눌러 저장해 주세요."); }
+    }));
+    if(makePdf){
+      bts.appendChild(mkBtn("📄 PDF로 저장","btn ghost", function(){
+        try{ makePdf().save(fname+".pdf"); }
+        catch(e){ try{ window.open(makePdf().output("bloburl"),"_blank"); }
+          catch(e2){ alert("이 브라우저에서는 PDF 저장이 막혀 있습니다. ‘이미지로 저장’을 쓰거나 다른 브라우저로 열어 주세요."); } }
+      }));
+    }
+    bts.appendChild(mkBtn("닫기","btn ghost", function(){ if(ov.parentNode) ov.parentNode.removeChild(ov); }));
+  }
 
   // ---------- helpers ----------
   function scoreOf(arr){ var s=0; QUESTIONS.forEach(function(it,i){ if(arr[i]===it.ans) s++; }); return s; }
