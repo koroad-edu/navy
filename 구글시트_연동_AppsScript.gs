@@ -23,11 +23,11 @@ function doPost(e){
     var ss = SpreadsheetApp.openById(SHEET_ID);
     var sh = ss.getSheetByName(TAB_NAME) || ss.insertSheet(TAB_NAME);
     if(sh.getLastRow() === 0){
-      sh.appendRow(["완료일시","소속부대","직위","연령","성명","사전점수","사후점수","수료여부"]);
+      sh.appendRow(["완료일시","연령","성명","사전점수","사후점수","수료여부"]);
     }
     var d = JSON.parse(e.postData.contents);
     sh.appendRow([ d.ts ? new Date(d.ts) : new Date(),
-                   d.unit, d.rank, d.age, d.name, d.pre, d.post, d.pass ]);
+                   d.age, d.name, d.pre, d.post, d.pass ]);
     return ContentService.createTextOutput("ok");
   }catch(err){
     return ContentService.createTextOutput("error: " + err);

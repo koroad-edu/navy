@@ -232,29 +232,6 @@
       <div class="chips"><span class="chip"># 한_잔도_NO</span><span class="chip"># 일단_멈춤</span><span class="chip"># 방어운전</span></div>
 
       <form class="grid" id="introForm" autocomplete="off" onsubmit="return false;">
-        <div class="field full">
-          <label>소속부대명 <span class="req">*</span><span class="hint">직접 입력</span></label>
-          <input type="text" id="f-unit" placeholder="예) 제○함대 ○○전대 ○○함">
-        </div>
-        <div class="field">
-          <label>직위(계급) <span class="req">*</span></label>
-          <select id="f-rank">
-            <option value="">선택하세요</option>
-            <optgroup label="병사">
-              <option>이병</option><option>일병</option><option>상병</option><option>병장</option>
-            </optgroup>
-            <optgroup label="부사관">
-              <option>하사</option><option>중사</option><option>상사</option><option>원사</option>
-            </optgroup>
-            <optgroup label="준·장교">
-              <option>준위</option><option>소위</option><option>중위</option><option>대위</option>
-              <option>소령</option><option>중령</option><option>대령</option><option>영관급 이상</option>
-            </optgroup>
-            <optgroup label="기타">
-              <option>군무원</option><option>기타</option>
-            </optgroup>
-          </select>
-        </div>
         <div class="field">
           <label>연령 <span class="req">*</span></label>
           <select id="f-age">
@@ -267,15 +244,15 @@
             <option>40세 이상</option>
           </select>
         </div>
-        <div class="field full">
-          <label>성함 <span class="req">*</span><span class="hint">성(姓)만 입력 · 이름은 ○○로 표기됩니다</span></label>
+        <div class="field">
+          <label>성함 <span class="req">*</span><span class="hint">성(姓)만 입력 · 이름은 ○○로 표기</span></label>
           <div class="name-row">
             <input type="text" id="f-surname" maxlength="2" placeholder="예) 정" oninput="updateNamePrev()">
             <span class="name-prev" id="namePrev">○○○</span>
           </div>
         </div>
       </form>
-      <div class="err" id="introErr">필수 항목을 모두 입력·선택해 주세요.</div>
+      <div class="err" id="introErr">연령과 성함(성)을 입력·선택해 주세요.</div>
       <div class="btnrow">
         <button class="btn primary wide" onclick="startCourse()">교육 시작하기 →</button>
       </div>
@@ -283,7 +260,7 @@
         <button class="btn ghost wide" id="installBtn" style="display:none;" onclick="installApp()">📲 홈 화면에 앱으로 추가</button>
       </div>
     </div>
-    <div class="foot">본 교육은 성(姓)과 소속만 수집하며 개인 식별정보는 최소화합니다. · <a onclick="openAdmin()">관리자</a></div>
+    <div class="foot">본 교육은 연령과 성(姓)만 수집하며, 소속·계급 등 개인 식별정보는 받지 않습니다. · <a onclick="openAdmin()">관리자</a></div>
   </section>
 
   <!-- ===== SCREEN: PRE-TEST ===== -->
@@ -1077,21 +1054,27 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     }
   };
 
-  // 이동하는 화면 외의 유튜브/영상 재생 중지(겹침 방지)
-  function stopMediaExcept(targetId){
+  // 화면 전환 시 영상 제어: 목적지 화면 영상만 복원, 나머지는 about:blank으로 완전 정지(겹침 방지)
+  function updateMedia(targetId){
     var target=$("s-"+targetId);
     document.querySelectorAll("iframe").forEach(function(f){
-      if(target && target.contains(f)) return;      // 목적지 화면 영상은 그대로
-      var s=f.getAttribute("src"); if(s){ f.src=s; } // src 리셋 → 재생 중지
+      var src=f.getAttribute("src")||"";
+      if(!f.getAttribute("data-src") && src && src!=="about:blank"){ f.setAttribute("data-src", src); } // 원본 1회 보관
+      var orig=f.getAttribute("data-src")||"";
+      var inTarget=target && target.contains(f);
+      if(inTarget){
+        if(orig && f.getAttribute("src")!==orig){ f.src=orig; }       // 목적지: 복원(다시 재생 가능)
+      } else {
+        if(f.getAttribute("src")!=="about:blank"){ f.src="about:blank"; } // 그 외: 즉시 정지
+      }
     });
     document.querySelectorAll("video").forEach(function(v){
-      if(target && target.contains(v)) return;
-      try{ v.pause(); }catch(e){}
+      if(!(target && target.contains(v))){ try{ v.pause(); }catch(e){} }
     });
   }
 
   function go(name){
-    stopMediaExcept(name);
+    updateMedia(name);
     SCREENS.forEach(function(s){
       var el=$("s-"+s); if(el) el.classList.toggle("active", s===name);
     });
@@ -1115,13 +1098,11 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     $("namePrev").textContent = v ? (v+"○○") : "○○○";
   };
   window.startCourse = function(){
-    var unit=($("f-unit").value||"").trim();
-    var rank=$("f-rank").value;
     var age=$("f-age").value;
     var surname=($("f-surname").value||"").trim();
-    if(!unit||!rank||!age||!surname){ $("introErr").style.display="block"; return; }
+    if(!age||!surname){ $("introErr").style.display="block"; return; }
     $("introErr").style.display="none";
-    state.info={ unit:unit, rank:rank, age:age, surname:surname, name:surname+"○○" };
+    state.info={ age:age, surname:surname, name:surname+"○○" };
     renderQuiz("preQuiz","pre");
     go("pre");
   };
@@ -1219,7 +1200,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     var i=state.info;
     var gain=state.postScore-state.preScore;
     $("resultInfo").innerHTML =
-      "<b>"+escapeHtml(i.name)+"</b> ("+escapeHtml(i.rank)+") · "+escapeHtml(i.unit)+"<br>"+
+      "<b>"+escapeHtml(i.name)+"</b> · "+escapeHtml(i.age)+"<br>"+
       "사전 "+state.preScore+" / "+TOTAL+"  →  사후 "+state.postScore+" / "+TOTAL+" 점"+
       (gain>0?" <span style='color:#2DD4BF'>(▲"+gain+")</span>":"");
     var btns=$("resultBtns"); btns.innerHTML="";
@@ -1236,7 +1217,7 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   function saveRecord(){
     var rec={
       ts:new Date().toISOString(),
-      unit:state.info.unit, rank:state.info.rank, age:state.info.age,
+      age:state.info.age,
       name:state.info.name, pre:state.preScore, post:state.postScore,
       pass: "이수"
     };
@@ -1261,9 +1242,9 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
   }
   window.downloadCSV = function(){
     var recs=loadRecords();
-    var head=["완료일시","소속부대","직위","연령","성명","사전점수","사후점수","수료여부"];
+    var head=["완료일시","연령","성명","사전점수","사후점수","수료여부"];
     var rows=recs.map(function(r){
-      return [fmtDate(r.ts), r.unit, r.rank, r.age, r.name, r.pre, r.post, r.pass];
+      return [fmtDate(r.ts), r.age, r.name, r.pre, r.post, r.pass];
     });
     var csv=[head].concat(rows).map(function(row){
       return row.map(function(c){ c=(""+c).replace(/"/g,'""'); return '"'+c+'"'; }).join(",");
@@ -1290,10 +1271,10 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
     $("adminCount").textContent="이 기기에 저장된 기록: 총 "+recs.length+"건 · CSV로 내려받아 구글시트 ‘해군’ 탭에 붙여넣기/가져오기 하세요.";
     var w=$("adminTblWrap");
     if(!recs.length){ w.innerHTML="<div class='soft'>저장된 기록이 없습니다.</div>"; return; }
-    var h="<table class='admin-tbl'><tr><th>완료일시</th><th>소속부대</th><th>직위</th><th>연령</th><th>성명</th><th>사전</th><th>사후</th><th>수료</th></tr>";
+    var h="<table class='admin-tbl'><tr><th>완료일시</th><th>연령</th><th>성명</th><th>사전</th><th>사후</th><th>수료</th></tr>";
     recs.slice().reverse().forEach(function(r){
-      h+="<tr><td>"+escapeHtml(fmtDate(r.ts))+"</td><td>"+escapeHtml(r.unit)+"</td><td>"+escapeHtml(r.rank)+
-         "</td><td>"+escapeHtml(r.age)+"</td><td>"+escapeHtml(r.name)+"</td><td>"+r.pre+"</td><td>"+r.post+
+      h+="<tr><td>"+escapeHtml(fmtDate(r.ts))+"</td><td>"+escapeHtml(r.age)+
+         "</td><td>"+escapeHtml(r.name)+"</td><td>"+r.pre+"</td><td>"+r.post+
          "</td><td>"+escapeHtml(r.pass)+"</td></tr>";
     });
     h+="</table>";
@@ -1349,8 +1330,8 @@ function(t){t.__bidiEngine__=t.prototype.__bidiEngine__=function(t){var n,r,i,a,
 
       // affiliation
       ctx.fillStyle="#9DB0CC";
-      ctx.font="500 27px 'Noto Sans KR','Malgun Gothic',sans-serif";
-      ctx.fillText("소속 "+i.unit+"    |    직위 "+i.rank+"    |    연령 "+i.age, cx, 512);
+      ctx.font="500 28px 'Noto Sans KR','Malgun Gothic',sans-serif";
+      ctx.fillText("연령  "+i.age, cx, 512);
 
       // body statement
       ctx.fillStyle="#EAF1FB";
